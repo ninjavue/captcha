@@ -20,20 +20,17 @@ app.use(
 const captchaStore = new Map();
 
 const createJigsawPiece = async (image, x, y, width, height) => {
-  // Asosiy canvas
   const canvas = createCanvas(300, 200);
   const ctx = canvas.getContext("2d");
   ctx.drawImage(image, 0, 0, 300, 200);
 
-  // Kattaroq to'rtburchak qirqib olish uchun canvas
   const extraSpace = 9;
-  const pieceWidth = width;  // Asosiy o'lcham
+  const pieceWidth = width;
   const pieceHeight = height;
   
   const squareCanvas = createCanvas(pieceWidth + extraSpace * 2, pieceHeight + extraSpace * 2);
   const squareCtx = squareCanvas.getContext("2d");
 
-  // Kattaroq qismni rasmdan qirqib olish
   squareCtx.drawImage(
     image, 
     x - extraSpace,
@@ -46,17 +43,43 @@ const createJigsawPiece = async (image, x, y, width, height) => {
     pieceHeight + extraSpace * 2
   );
 
-  // Jigsaw shakli uchun canvas
   const pieceCanvas = createCanvas(pieceWidth + extraSpace * 2, pieceHeight + extraSpace * 2);
   const pieceCtx = pieceCanvas.getContext("2d");
 
-  // Jigsaw shakli parametrlari
   const knobSize = Math.min(width, height) * 0.3;
 
-  // Jigsaw shaklini chizish
+  // Shoxlar yo'nalishini generatsiya qilish
+  let directions;
+  do {
+    directions = {
+      top: Math.random() < 0.5 ? 1 : -1,
+      right: Math.random() < 0.5 ? 1 : -1,
+      bottom: Math.random() < 0.5 ? 1 : -1,
+      left: Math.random() < 0.5 ? 1 : -1
+    };
+
+    // Ichkariga kirgan shoxlar soni
+    const inwardCount = Object.values(directions).filter(d => d === -1).length;
+    
+    // Agar hech qaysi shox ichkariga kirmagan bo'lsa
+    if (inwardCount === 0) {
+      // Tasodifiy bitta shoxni ichkariga o'zgartirish
+      const sides = ['top', 'right', 'bottom', 'left'];
+      const randomSide = sides[Math.floor(Math.random() * sides.length)];
+      directions[randomSide] = -1;
+    }
+
+  } while (
+    // Ichkariga kirgan shoxlar 2 tadan ko'p bo'lmasin
+    Object.values(directions).filter(d => d === -1).length > 2 ||
+    // Qarama-qarshi tomonlar bir vaqtda ichkarida bo'lmasin
+    (directions.top === -1 && directions.bottom === -1) ||
+    (directions.left === -1 && directions.right === -1) ||
+    // Kamida bitta shox ichkarida bo'lsin
+    Object.values(directions).filter(d => d === -1).length === 0
+  );
+
   pieceCtx.beginPath();
-  
-  // Asosiy to'rtburchak
   const baseX = extraSpace;
   const baseY = extraSpace;
   
@@ -64,8 +87,8 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   pieceCtx.moveTo(baseX, baseY);
   pieceCtx.lineTo(baseX + width * 0.3, baseY);
   pieceCtx.bezierCurveTo(
-    baseX + width * 0.4, baseY - knobSize,
-    baseX + width * 0.6, baseY - knobSize,
+    baseX + width * 0.4, baseY - knobSize * directions.top,
+    baseX + width * 0.6, baseY - knobSize * directions.top,
     baseX + width * 0.7, baseY
   );
   pieceCtx.lineTo(baseX + width, baseY);
@@ -73,8 +96,8 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   // O'ng tomon
   pieceCtx.lineTo(baseX + width, baseY + height * 0.3);
   pieceCtx.bezierCurveTo(
-    baseX + width + knobSize, baseY + height * 0.4,
-    baseX + width + knobSize, baseY + height * 0.6,
+    baseX + width + knobSize * directions.right, baseY + height * 0.4,
+    baseX + width + knobSize * directions.right, baseY + height * 0.6,
     baseX + width, baseY + height * 0.7
   );
   pieceCtx.lineTo(baseX + width, baseY + height);
@@ -82,8 +105,8 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   // Pastki qism
   pieceCtx.lineTo(baseX + width * 0.7, baseY + height);
   pieceCtx.bezierCurveTo(
-    baseX + width * 0.6, baseY + height + knobSize,
-    baseX + width * 0.4, baseY + height + knobSize,
+    baseX + width * 0.6, baseY + height + knobSize * directions.bottom,
+    baseX + width * 0.4, baseY + height + knobSize * directions.bottom,
     baseX + width * 0.3, baseY + height
   );
   pieceCtx.lineTo(baseX, baseY + height);
@@ -91,19 +114,17 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   // Chap tomon
   pieceCtx.lineTo(baseX, baseY + height * 0.7);
   pieceCtx.bezierCurveTo(
-    baseX - knobSize, baseY + height * 0.6,
-    baseX - knobSize, baseY + height * 0.4,
+    baseX - knobSize * directions.left, baseY + height * 0.6,
+    baseX - knobSize * directions.left, baseY + height * 0.4,
     baseX, baseY + height * 0.3
   );
   pieceCtx.closePath();
 
-  // Jigsaw shaklini kesib olish va rasmni chizish
   pieceCtx.clip();
   pieceCtx.drawImage(squareCanvas, 0, 0);
 
   // Asosiy rasmda teshik qoldirish
   ctx.save();
-  // Teshik markazini to'g'rilash
   ctx.translate(x, y);
   ctx.beginPath();
   
@@ -112,8 +133,8 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   ctx.moveTo(0, 0);
   ctx.lineTo(width * 0.3, 0);
   ctx.bezierCurveTo(
-    width * 0.4, -knobSize,
-    width * 0.6, -knobSize,
+    width * 0.4, -knobSize * directions.top,
+    width * 0.6, -knobSize * directions.top,
     width * 0.7, 0
   );
   ctx.lineTo(width, 0);
@@ -121,8 +142,8 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   // O'ng tomon
   ctx.lineTo(width, height * 0.3);
   ctx.bezierCurveTo(
-    width + knobSize, height * 0.4,
-    width + knobSize, height * 0.6,
+    width + knobSize * directions.right, height * 0.4,
+    width + knobSize * directions.right, height * 0.6,
     width, height * 0.7
   );
   ctx.lineTo(width, height);
@@ -130,8 +151,8 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   // Pastki qism
   ctx.lineTo(width * 0.7, height);
   ctx.bezierCurveTo(
-    width * 0.6, height + knobSize,
-    width * 0.4, height + knobSize,
+    width * 0.6, height + knobSize * directions.bottom,
+    width * 0.4, height + knobSize * directions.bottom,
     width * 0.3, height
   );
   ctx.lineTo(0, height);
@@ -139,13 +160,12 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   // Chap tomon
   ctx.lineTo(0, height * 0.7);
   ctx.bezierCurveTo(
-    -knobSize, height * 0.6,
-    -knobSize, height * 0.4,
+    -knobSize * directions.left, height * 0.6,
+    -knobSize * directions.left, height * 0.4,
     0, height * 0.3
   );
   ctx.closePath();
 
-  // Teshikni oq rang bilan to'ldirish
   ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
   ctx.fill();
   ctx.restore();
@@ -153,7 +173,7 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   return {
     piece: pieceCanvas,
     imageWithHole: canvas,
-    jigsawX: x,  // Original koordinatalar
+    jigsawX: x,
     jigsawY: y
   };
 };
