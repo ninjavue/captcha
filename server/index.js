@@ -28,6 +28,7 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   const pieceWidth = width;
   const pieceHeight = height;
   
+  // Asosiy rasmdan qirqib olish
   const squareCanvas = createCanvas(pieceWidth + extraSpace * 2, pieceHeight + extraSpace * 2);
   const squareCtx = squareCanvas.getContext("2d");
 
@@ -46,9 +47,8 @@ const createJigsawPiece = async (image, x, y, width, height) => {
   const pieceCanvas = createCanvas(pieceWidth + extraSpace * 2, pieceHeight + extraSpace * 2);
   const pieceCtx = pieceCanvas.getContext("2d");
 
-  const knobSize = Math.min(width, height) * 0.3;
+  const knobSize = Math.min(width, height) * 0.25;
 
-  // Shoxlar yo'nalishini generatsiya qilish
   let directions;
   do {
     directions = {
@@ -58,116 +58,158 @@ const createJigsawPiece = async (image, x, y, width, height) => {
       left: Math.random() < 0.5 ? 1 : -1
     };
 
-    // Ichkariga kirgan shoxlar soni
     const inwardCount = Object.values(directions).filter(d => d === -1).length;
     
-    // Agar hech qaysi shox ichkariga kirmagan bo'lsa
     if (inwardCount === 0) {
-      // Tasodifiy bitta shoxni ichkariga o'zgartirish
       const sides = ['top', 'right', 'bottom', 'left'];
       const randomSide = sides[Math.floor(Math.random() * sides.length)];
       directions[randomSide] = -1;
     }
 
   } while (
-    // Ichkariga kirgan shoxlar 2 tadan ko'p bo'lmasin
     Object.values(directions).filter(d => d === -1).length > 2 ||
-    // Qarama-qarshi tomonlar bir vaqtda ichkarida bo'lmasin
     (directions.top === -1 && directions.bottom === -1) ||
     (directions.left === -1 && directions.right === -1) ||
-    // Kamida bitta shox ichkarida bo'lsin
     Object.values(directions).filter(d => d === -1).length === 0
   );
 
-  pieceCtx.beginPath();
-  const baseX = extraSpace;
-  const baseY = extraSpace;
-  
-  // Yuqori qism
-  pieceCtx.moveTo(baseX, baseY);
-  pieceCtx.lineTo(baseX + width * 0.3, baseY);
-  pieceCtx.bezierCurveTo(
-    baseX + width * 0.4, baseY - knobSize * directions.top,
-    baseX + width * 0.6, baseY - knobSize * directions.top,
-    baseX + width * 0.7, baseY
-  );
-  pieceCtx.lineTo(baseX + width, baseY);
+  // Puzzle shaklini chizish funksiyasi
+  const drawPuzzleShape = (context, baseX, baseY, width, height, directions, knobSize) => {
+    context.beginPath();
+    
+    // Yuqori qism
+    context.moveTo(baseX, baseY);
+    context.lineTo(baseX + width * 0.35, baseY);
+    context.bezierCurveTo(
+      baseX + width * 0.45, baseY - knobSize * directions.top * 0.8,
+      baseX + width * 0.55, baseY - knobSize * directions.top * 0.8,
+      baseX + width * 0.65, baseY
+    );
+    context.lineTo(baseX + width, baseY);
 
-  // O'ng tomon
-  pieceCtx.lineTo(baseX + width, baseY + height * 0.3);
-  pieceCtx.bezierCurveTo(
-    baseX + width + knobSize * directions.right, baseY + height * 0.4,
-    baseX + width + knobSize * directions.right, baseY + height * 0.6,
-    baseX + width, baseY + height * 0.7
-  );
-  pieceCtx.lineTo(baseX + width, baseY + height);
+    // O'ng tomon
+    context.lineTo(baseX + width, baseY + height * 0.35);
+    context.bezierCurveTo(
+      baseX + width + knobSize * directions.right * 0.8, baseY + height * 0.45,
+      baseX + width + knobSize * directions.right * 0.8, baseY + height * 0.55,
+      baseX + width, baseY + height * 0.65
+    );
+    context.lineTo(baseX + width, baseY + height);
 
-  // Pastki qism
-  pieceCtx.lineTo(baseX + width * 0.7, baseY + height);
-  pieceCtx.bezierCurveTo(
-    baseX + width * 0.6, baseY + height + knobSize * directions.bottom,
-    baseX + width * 0.4, baseY + height + knobSize * directions.bottom,
-    baseX + width * 0.3, baseY + height
-  );
-  pieceCtx.lineTo(baseX, baseY + height);
+    // Pastki qism
+    context.lineTo(baseX + width * 0.65, baseY + height);
+    context.bezierCurveTo(
+      baseX + width * 0.55, baseY + height + knobSize * directions.bottom * 0.8,
+      baseX + width * 0.45, baseY + height + knobSize * directions.bottom * 0.8,
+      baseX + width * 0.35, baseY + height
+    );
+    context.lineTo(baseX, baseY + height);
 
-  // Chap tomon
-  pieceCtx.lineTo(baseX, baseY + height * 0.7);
-  pieceCtx.bezierCurveTo(
-    baseX - knobSize * directions.left, baseY + height * 0.6,
-    baseX - knobSize * directions.left, baseY + height * 0.4,
-    baseX, baseY + height * 0.3
-  );
-  pieceCtx.closePath();
+    // Chap tomon
+    context.lineTo(baseX, baseY + height * 0.65);
+    context.bezierCurveTo(
+      baseX - knobSize * directions.left * 0.8, baseY + height * 0.55,
+      baseX - knobSize * directions.left * 0.8, baseY + height * 0.45,
+      baseX, baseY + height * 0.35
+    );
+    context.closePath();
+  };
 
+  // 1. Frontend uchun puzzle bo'lakcha
+  drawPuzzleShape(pieceCtx, extraSpace, extraSpace, width, height, directions, knobSize);
   pieceCtx.clip();
   pieceCtx.drawImage(squareCanvas, 0, 0);
 
-  // Asosiy rasmda teshik qoldirish
+  // 2. Asosiy rasmda teshik qoldirish
   ctx.save();
   ctx.translate(x, y);
-  ctx.beginPath();
   
-  // Teshik uchun jigsaw shakli
-  // Yuqori qism
-  ctx.moveTo(0, 0);
-  ctx.lineTo(width * 0.3, 0);
-  ctx.bezierCurveTo(
-    width * 0.4, -knobSize * directions.top,
-    width * 0.6, -knobSize * directions.top,
-    width * 0.7, 0
-  );
-  ctx.lineTo(width, 0);
-
-  // O'ng tomon
-  ctx.lineTo(width, height * 0.3);
-  ctx.bezierCurveTo(
-    width + knobSize * directions.right, height * 0.4,
-    width + knobSize * directions.right, height * 0.6,
-    width, height * 0.7
-  );
-  ctx.lineTo(width, height);
-
-  // Pastki qism
-  ctx.lineTo(width * 0.7, height);
-  ctx.bezierCurveTo(
-    width * 0.6, height + knobSize * directions.bottom,
-    width * 0.4, height + knobSize * directions.bottom,
-    width * 0.3, height
-  );
-  ctx.lineTo(0, height);
-
-  // Chap tomon
-  ctx.lineTo(0, height * 0.7);
-  ctx.bezierCurveTo(
-    -knobSize * directions.left, height * 0.6,
-    -knobSize * directions.left, height * 0.4,
-    0, height * 0.3
-  );
-  ctx.closePath();
-
-  ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+  // Teshik uchun path
+  drawPuzzleShape(ctx, 0, 0, width, height, directions, knobSize);
+  
+  // Teshikni oqlash
+  ctx.fillStyle = "white";
   ctx.fill();
+  
+  // Teshik atrofiga border
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  // 3. Boshqa joydan olingan puzzle bo'lakcha
+  // Koordinatalar (rasmning boshqa qismidan)
+  const fillX = Math.max(0, Math.min(200, x + 100));
+  const fillY = Math.max(0, Math.min(100, y + 50));
+  
+  // Boshqa joydan olingan puzzle bo'lakchani yaratish 
+  // Kattaroq canvas yaratish shoxlar ko'rinishi uchun
+  const backPieceCanvas = createCanvas(pieceWidth + extraSpace * 4, pieceHeight + extraSpace * 4);
+  const backPieceCtx = backPieceCanvas.getContext("2d");
+  
+  // Boshqa joydan rasm qirqib olish - kattaroq area
+  backPieceCtx.drawImage(
+    image, 
+    fillX - extraSpace * 2,
+    fillY - extraSpace * 2,
+    pieceWidth + extraSpace * 4,
+    pieceHeight + extraSpace * 4,
+    0,
+    0,
+    pieceWidth + extraSpace * 4,
+    pieceHeight + extraSpace * 4
+  );
+  
+  // Puzzle shakli chizish - markazda
+  drawPuzzleShape(backPieceCtx, extraSpace * 2, extraSpace * 2, width, height, directions, knobSize);
+  
+  // Shakl chizish va chiqib turadiganlarini ham qo'shib olish
+  backPieceCtx.save();
+  backPieceCtx.clip();
+  backPieceCtx.drawImage(
+    image, 
+    fillX - extraSpace * 2,
+    fillY - extraSpace * 2,
+    pieceWidth + extraSpace * 4,
+    pieceHeight + extraSpace * 4,
+    0,
+    0,
+    pieceWidth + extraSpace * 4,
+    pieceHeight + extraSpace * 4
+  );
+  
+  // Border qo'shish (xuddi frontga ketayotgan puzzle kabi)
+  backPieceCtx.restore();
+  backPieceCtx.strokeStyle = "#000000";
+  backPieceCtx.lineWidth = 1;
+  backPieceCtx.stroke();
+  
+  // Teshikka joylash - o'lchamini to'g'ri berish uchun kerakli qismi chiqib turadigan shoxlarni ham olish
+  // Shoxlar bilan birga puzzle o'lchamini hisoblash
+  const maxKnobExtent = knobSize * 0.8; // Shoxlarning maksimal chiqib turish darajasi
+  
+  // Puzzle shakli tashqarisini transparent qilish
+  backPieceCtx.globalCompositeOperation = 'destination-in';
+  drawPuzzleShape(backPieceCtx, extraSpace * 2, extraSpace * 2, width, height, directions, knobSize);
+  backPieceCtx.fill();
+  backPieceCtx.globalCompositeOperation = 'source-over';
+  
+  // Border chizish
+  backPieceCtx.strokeStyle = "#000000";
+  backPieceCtx.lineWidth = 1;
+  backPieceCtx.stroke();
+  
+  ctx.drawImage(
+    backPieceCanvas,
+    extraSpace * 2 - maxKnobExtent, // Chap tomondagi shox uchun joy
+    extraSpace * 2 - maxKnobExtent, // Yuqori tomondagi shox uchun joy
+    width + maxKnobExtent * 2,  // Yon tomonlar uchun qo'shimcha
+    height + maxKnobExtent * 2, // Yuqori/past tomonlar uchun qo'shimcha
+    -maxKnobExtent, // Chap shoxni ko'rsatish
+    -maxKnobExtent, // Yuqori shoxni ko'rsatish
+    width + maxKnobExtent * 2,  // To'liq kenglik
+    height + maxKnobExtent * 2  // To'liq balandlik
+  );
+  
   ctx.restore();
 
   return {
